@@ -32,14 +32,12 @@ bool taskAppearsOn(Task task, DateTime date) {
   }
 }
 
-// ── Providers ─────────────────────────────────────────────────────────────
+// ── Providers ────────────────────────────────────────────────────────────
 
-// FIX: use watch(fireImmediately: true) so the stream emits immediately
-// even when the database is empty. This cures the infinite loading spinner.
 final allTasksProvider = StreamProvider<List<Task>>((ref) {
   return IsarService.db.tasks
       .where()
-      .watch(fireImmediately: true);  // <-- THE KEY FIX
+      .watch(fireImmediately: true);
 });
 
 // Derived provider: today's subset, no async needed
@@ -50,13 +48,21 @@ final todayTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
   );
 });
 
-// FIX: same fireImmediately fix for logs
-final todayLogsProvider = StreamProvider<Map<String, TaskLog>>((ref) {
-  final today = dateStr(DateTime.now());
+// NEW: Provider for tasks on a specific date (instead of hardcoded today)
+final selectedDateTasksProvider = Provider.family<AsyncValue<List<Task>>, DateTime>((ref, date) {
+  final tasks = ref.watch(allTasksProvider);
+  return tasks.whenData(
+    (list) => list.where((t) => taskAppearsOn(t, date)).toList(),
+  );
+});
+
+// FIX: Logs provider for a specific date (instead of hardcoded today)
+final tasksLogsForDateProvider = StreamProvider.family<Map<String, TaskLog>, DateTime>((ref, date) {
+  final dateString = dateStr(date);
   return IsarService.db.taskLogs
       .filter()
-      .dateEqualTo(today)
-      .watch(fireImmediately: true)  // <-- THE KEY FIX
+      .dateEqualTo(dateString)
+      .watch(fireImmediately: true)
       .map((logs) {
         final map = <String, TaskLog>{};
         for (final log in logs) { map[log.taskUuid] = log; }
@@ -64,18 +70,31 @@ final todayLogsProvider = StreamProvider<Map<String, TaskLog>>((ref) {
       });
 });
 
-// FIX: same fireImmediately fix for tags
+// Keep this for backward compatibility with today
+final todayLogsProvider = StreamProvider<Map<String, TaskLog>>((ref) {
+  final today = dateStr(DateTime.now());
+  return IsarService.db.taskLogs
+      .filter()
+      .dateEqualTo(today)
+      .watch(fireImmediately: true)
+      .map((logs) {
+        final map = <String, TaskLog>{};
+        for (final log in logs) { map[log.taskUuid] = log; }
+        return map;
+      });
+});
+
 final allTagsProvider = StreamProvider<List<Tag>>((ref) {
   return IsarService.db.tags
       .where()
-      .watch(fireImmediately: true)  // <-- THE KEY FIX
+      .watch(fireImmediately: true)
       .map((tags) {
         tags.sort((a, b) => a.order.compareTo(b.order));
         return tags;
       });
 });
 
-// ── TaskService ───────────────────────────────────────────────────────────
+// ── TaskService ──────────────────────────────────────────────────────────
 
 class TaskService {
 
@@ -85,12 +104,9 @@ class TaskService {
     });
   }
 
-  // Delete a task and all its logs
   static Future<void> deleteTask(Task task) async {
     await IsarService.db.writeTxn(() async {
-      // Delete the task
       await IsarService.db.tasks.delete(task.id);
-      // Delete all daily logs for this task
       final logs = await IsarService.db.taskLogs
           .filter().taskUuidEqualTo(task.uuid).findAll();
       final logIds = logs.map((l) => l.id).toList();

@@ -5,32 +5,34 @@ import '../isar_service.dart';
 import '../models/time_block.dart';
 
 const _uuid = Uuid();
-const double _hourHeight = 64.0; // pixel height of one hour row
-const double _timeColW   = 56.0; // width of the left time label column
+const double _hourHeight = 64.0;
+const double _timeColW   = 56.0;
 
-// Converts a DateTime's time to minutes-from-midnight
 int _toMinutes(TimeOfDay t) => t.hour * 60 + t.minute;
 
-// Returns today's date string YYYY-MM-DD
 String _ds(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
 
 class TimetableScreen extends StatefulWidget {
-  const TimetableScreen({super.key});
+  final DateTime? selectedDate; // NEW: Accept selected date from calendar
+  
+  const TimetableScreen({super.key, this.selectedDate});
+  
   @override
   State<TimetableScreen> createState() => _TimetableScreenState();
 }
 
 class _TimetableScreenState extends State<TimetableScreen> {
-  DateTime _viewDate = DateTime.now(); // Which day the user is viewing
+  late DateTime _viewDate;
   List<TimeBlock> _blocks = [];
   final _scrollCtrl = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    // NEW: Initialize with selected date or today
+    _viewDate = widget.selectedDate ?? DateTime.now();
     _loadBlocks();
-    // Scroll to 7 AM on open
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
@@ -42,6 +44,20 @@ class _TimetableScreenState extends State<TimetableScreen> {
     });
   }
 
+  @override
+  void didUpdateWidget(TimetableScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // NEW: Update view date if selected date changes
+    if (widget.selectedDate != null && 
+        widget.selectedDate != oldWidget.selectedDate) {
+      setState(() {
+        _viewDate = widget.selectedDate!;
+        _blocks = [];
+      });
+      _loadBlocks();
+    }
+  }
+
   Future<void> _loadBlocks() async {
     final blocks = await IsarService.db.timeBlocks
         .filter()
@@ -51,7 +67,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
     if (mounted) setState(() => _blocks = blocks);
   }
 
-  // Called when user changes day (prev/next arrows)
   void _changeDay(int delta) {
     setState(() {
       _viewDate = _viewDate.add(Duration(days: delta));
@@ -67,12 +82,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          // Previous day arrow
           IconButton(
             icon: const Icon(Icons.chevron_left),
             onPressed: () => _changeDay(-1),
           ),
-          // Day label
           GestureDetector(
             onTap: () async {
               final picked = await showDatePicker(
@@ -91,14 +104,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
           ),
-          // Next day arrow
           IconButton(
             icon: const Icon(Icons.chevron_right),
             onPressed: () => _changeDay(1),
           ),
         ]),
       ),
-      // FAB to add a new block
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context),
         icon: const Icon(Icons.add),
@@ -107,16 +118,13 @@ class _TimetableScreenState extends State<TimetableScreen> {
       body: SingleChildScrollView(
         controller: _scrollCtrl,
         child: SizedBox(
-          // Total height = 24 hours x pixels per hour
           height: 24 * _hourHeight,
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-            // ── Left column: hour labels (00:00 … 23:00) ───────────────
             SizedBox(
               width: _timeColW,
               child: Stack(
                 children: List.generate(24, (h) => Positioned(
-                  top: h * _hourHeight - 8, // -8 to vertically centre label
+                  top: h * _hourHeight - 8,
                   left: 0, right: 0,
                   child: Text(
                     h == 0 ? '' : '${h.toString().padLeft(2,'0')}:00',
@@ -127,29 +135,20 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 )),
               ),
             ),
-
-            // ── Right column: hour grid lines + blocks ──────────────────
             Expanded(
               child: Stack(children: [
-
-                // Hour divider lines
                 ...List.generate(24, (h) => Positioned(
                   top: h * _hourHeight,
                   left: 0, right: 0,
                   child: Divider(
                     height: 1, thickness: 0.5,
                     color: h % 6 == 0
-                        ? Colors.grey.shade400   // darker every 6 hours
+                        ? Colors.grey.shade400
                         : Colors.grey.shade200,
                   ),
                 )),
-
-                // 'Now' indicator line (only on today)
                 if (isToday) _nowIndicator(),
-
-                // Time blocks
                 ..._blocks.map((block) => _blockWidget(context, block)),
-
               ]),
             ),
             const SizedBox(width: 8),
@@ -159,7 +158,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
     );
   }
 
-  // The red 'current time' line, like Google Calendar
   Widget _nowIndicator() {
     final now = DateTime.now();
     final top = (now.hour * 60 + now.minute) * (_hourHeight / 60);
@@ -175,7 +173,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
     );
   }
 
-  // A single positioned time block card
   Widget _blockWidget(BuildContext context, TimeBlock block) {
     final top    = block.startMinute * (_hourHeight / 60);
     final height = block.durationMinutes * (_hourHeight / 60);
@@ -186,15 +183,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
       left: 4, right: 4,
       height: height.clamp(24.0, double.infinity),
       child: GestureDetector(
-        // Long-press to delete
         onLongPress: () => _confirmDelete(context, block),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.25),
+            color: color.withOpacity(0.15), // UPDATED: Changed from 0.25 to 0.5
             borderRadius: BorderRadius.circular(6),
             border: Border(left: BorderSide(color: color, width: 4)),
           ),
+          clipBehavior: Clip.hardEdge, // NEW: Prevents overflow
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -202,7 +199,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               Text(block.label,
                   style: TextStyle(fontWeight: FontWeight.bold,
                       fontSize: height < 32 ? 11 : 13,
-                      color: color.withOpacity(0.9)),
+                      color: color.withOpacity(0.15)),
                   maxLines: 1, overflow: TextOverflow.ellipsis),
               if (height >= 36)
                 Text('${block.startLabel} – ${block.endLabel}',
@@ -215,7 +212,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
     );
   }
 
-  // Delete confirmation dialog
   void _confirmDelete(BuildContext context, TimeBlock block) {
     showDialog(
       context: context,
@@ -231,7 +227,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               await IsarService.db.writeTxn(() async {
                 await IsarService.db.timeBlocks.delete(block.id);
               });
-              _loadBlocks(); // Refresh the view
+              _loadBlocks();
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -240,23 +236,21 @@ class _TimetableScreenState extends State<TimetableScreen> {
     );
   }
 
-  // Add block dialog with time pickers and colour picker
   void _showAddDialog(BuildContext context) {
     final labelCtrl = TextEditingController();
     TimeOfDay start = const TimeOfDay(hour: 9, minute: 0);
     TimeOfDay end   = const TimeOfDay(hour: 10, minute: 0);
     Color selectedColor = const Color(0xFF0D9488);
 
-    // The colours available to pick for a block
     final colors = [
-      const Color(0xFF0D9488), // teal
-      const Color(0xFF1D4ED8), // blue
-      const Color(0xFF15803D), // green
-      const Color(0xFFEA580C), // orange
-      const Color(0xFF7C3AED), // purple
-      const Color(0xFFDC2626), // red
-      const Color(0xFFCA8A04), // yellow
-      const Color(0xFFDB2777), // pink
+      const Color(0xFF0D9488),
+      const Color(0xFF1D4ED8),
+      const Color(0xFF15803D),
+      const Color(0xFFEA580C),
+      const Color(0xFF7C3AED),
+      const Color(0xFFDC2626),
+      const Color(0xFFCA8A04),
+      const Color(0xFFDB2777),
     ];
 
     showDialog(
@@ -269,8 +263,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
-                // Label field
                 TextField(
                   controller: labelCtrl,
                   autofocus: true,
@@ -281,8 +273,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Start + End time
                 Row(children: [
                   Expanded(child: OutlinedButton.icon(
                     icon: const Icon(Icons.access_time, size: 16),
@@ -305,8 +295,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   )),
                 ]),
                 const SizedBox(height: 16),
-
-                // Colour picker row
                 const Text('Colour', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Wrap(spacing: 8, children: colors.map((c) => GestureDetector(
@@ -352,7 +340,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   await IsarService.db.timeBlocks.put(block);
                 });
                 Navigator.pop(ctx);
-                _loadBlocks(); // Reload and re-sort
+                _loadBlocks();
               },
               child: const Text('Add'),
             ),

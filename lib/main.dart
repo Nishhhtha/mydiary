@@ -7,9 +7,9 @@ import 'screens/timetable_screen.dart';
 import 'screens/add_task_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Required before any async work
-  await IsarService.init();                  // Open the local database
-  runApp(const ProviderScope(child: MyApp())); // ProviderScope enables Riverpod
+  WidgetsFlutterBinding.ensureInitialized();
+  await IsarService.init();
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -37,18 +37,34 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  DateTime? _selectedDateFromCalendar; // NEW: Store selected date from calendar
 
-  final List<Widget> _screens = const [
-    CalendarScreen(),
-    TodoScreen(),
-    TimetableScreen(),
-    AddTaskScreen(),
-  ];
+  // REMOVED: const List<Widget> _screens - because we need to rebuild them with new date
+
+  // NEW: Build screens dynamically with selected date
+  List<Widget> _buildScreens() {
+    return [
+      CalendarScreen(onDateSelected: _onDateSelectedFromCalendar),
+      TodoScreen(selectedDate: _selectedDateFromCalendar),
+      TimetableScreen(selectedDate: _selectedDateFromCalendar),
+      const AddTaskScreen(),
+    ];
+  }
+
+  // NEW: Callback when date is selected in calendar
+  void _onDateSelectedFromCalendar(DateTime date) {
+    setState(() {
+      _selectedDateFromCalendar = date;
+      _currentIndex = 1; // Navigate to Todo screen
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screens = _buildScreens(); // FIXED: Build screens dynamically
+    
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),

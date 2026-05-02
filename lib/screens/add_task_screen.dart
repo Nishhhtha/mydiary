@@ -27,7 +27,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   Tag?       _selectedTag;
   Color      _newTagColor = const Color(0xFF4CAF50);
   bool       _saving     = false;
-  bool       _creatingTag= false; // Toggle: show existing tags or create new
+  bool       _creatingTag= false;
+  
+  final Set<int> _selectedDays = {};
+  static const List<String> _dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +49,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
             children: [
 
               // ── Tag section ──────────────────────────────────────────
-              _label('Tag (Category)'),
+              _label('Tag'),
               if (!_creatingTag) ...[
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   ...tags.map((t) => GestureDetector(
@@ -54,7 +57,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                     child: Chip(
                       label: Text(t.name),
                       backgroundColor: _selectedTag?.uuid == t.uuid
-                          ? t.color.withOpacity(0.4) : null,
+                          ? t.color.withOpacity(0.5) : null,
                       side: BorderSide(
                         color: _selectedTag?.uuid == t.uuid ? Colors.black38 : Colors.grey.shade300),
                     ),
@@ -67,24 +70,30 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               ] else ...[
                 _field(_newTagNameCtrl, 'Tag name, e.g. Exercise'),
                 const SizedBox(height: 8),
-                // Simple colour picker row
-                Wrap(spacing: 8, children: [
-                  for (final c in [Colors.green, Colors.blue, Colors.pink,
-                      Colors.orange, Colors.purple, Colors.teal,
-                      Colors.red, Colors.amber])
-                    GestureDetector(
-                      onTap: () => setState(() => _newTagColor = c),
-                      child: Container(
-                        width: 32, height: 32,
-                        decoration: BoxDecoration(
-                          color: c, shape: BoxShape.circle,
-                          border: Border.all(
-                            color: _newTagColor == c ? Colors.black : Colors.transparent,
-                            width: 3),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [
+                    for (final c in [Colors.green, Colors.blue, Colors.pink,
+                        Colors.orange, Colors.purple, Colors.teal,
+                        Colors.red, Colors.amber])
+                      GestureDetector(
+                        onTap: () => setState(() => _newTagColor = c),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(
+                              color: c.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _newTagColor == c ? Colors.black : Colors.transparent,
+                                width: 3),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                ]),
+                  ]),
+                ),
                 const SizedBox(height: 8),
                 Row(children: [
                   ElevatedButton(onPressed: _saveTag, child: const Text('Save Tag')),
@@ -96,7 +105,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               const SizedBox(height: 20),
 
               // ── Activity name ────────────────────────────────────────
-              _label('Activity Name'),
+              _label('Activity'),
               _field(_titleCtrl, 'e.g. Morning Walk, English Essay'),
               const SizedBox(height: 16),
 
@@ -106,19 +115,62 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               const SizedBox(height: 16),
 
               // ── Metric type ──────────────────────────────────────────
-              _label('Metric Type'),
+              _label('Metric'),
               Row(children: [
                 Radio<MetricType>(value: MetricType.boolean, groupValue: _metricType,
                     onChanged: (v) => setState(() => _metricType = v!)),
-                const Text('Checkbox'),
-                const SizedBox(width: 20),
+                const Expanded(child: Text('Checkbox')),
                 Radio<MetricType>(value: MetricType.numeric, groupValue: _metricType,
                     onChanged: (v) => setState(() => _metricType = v!)),
-                const Text('Track a number'),
+                const Expanded(child: Text('Count')),
               ]),
               if (_metricType == MetricType.numeric) ...[
-                _label('Unit (e.g. steps, km, kg)'),
-                _field(_metricUnitCtrl, 'e.g. steps'),
+                _label('Unit'),
+                const SizedBox(height: 8),
+                // NEW: Predefined unit options
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [
+                    for (final unit in ['steps', 'km', 'kg', 'm', 'custom'])
+                      GestureDetector(
+                        onTap: () {
+                          if (unit == 'custom') {
+                            _metricUnitCtrl.clear();
+                          } else {
+                            _metricUnitCtrl.text = unit;
+                          }
+                          setState(() {});
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: (_metricUnitCtrl.text == unit || (unit == 'custom' && _metricUnitCtrl.text.isEmpty))
+                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: (_metricUnitCtrl.text == unit || (unit == 'custom' && _metricUnitCtrl.text.isEmpty))
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey.shade300,
+                              ),
+                            ),
+                            child: Text(
+                              unit == 'custom' ? 'Custom' : unit,
+                              style: TextStyle(
+                                fontWeight: (_metricUnitCtrl.text == unit || (unit == 'custom' && _metricUnitCtrl.text.isEmpty))
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ]),
+                ),
+                const SizedBox(height: 12),
+                _field(_metricUnitCtrl, 'Custom unit'),
                 const SizedBox(height: 8),
                 _label('Daily Target'),
                 _field(_metricTargetCtrl, 'e.g. 10000',
@@ -127,17 +179,22 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               const SizedBox(height: 16),
 
               // ── Date rule ────────────────────────────────────────────
-              _label('When should this task appear?'),
+              _label('Date'),
               DropdownButtonFormField<DateRule>(
                 value: _dateRule,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: DateRule.everyday,     child: Text('Every day')),
-                  DropdownMenuItem(value: DateRule.specificDate, child: Text('One specific date')),
-                  DropdownMenuItem(value: DateRule.deadline,     child: Text('Has a deadline — shows daily until done')),
-                  DropdownMenuItem(value: DateRule.specificDays, child: Text('Specific days of the week')),
+                  DropdownMenuItem(value: DateRule.specificDate, child: Text('Date')),
+                  DropdownMenuItem(value: DateRule.deadline,     child: Text('Deadline')),
+                  DropdownMenuItem(value: DateRule.specificDays, child: Text('Repeat')),
                 ],
-                onChanged: (v) => setState(() => _dateRule = v!),
+                onChanged: (v) => setState(() {
+                  _dateRule = v!;
+                  if (v == DateRule.specificDays) {
+                    _selectedDays.clear();
+                  }
+                }),
               ),
               if (_dateRule == DateRule.specificDate || _dateRule == DateRule.deadline)
                 _datePicker('Start Date', _startDate,
@@ -145,6 +202,39 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               if (_dateRule == DateRule.deadline)
                 _datePicker('Due Date (Deadline)', _endDate,
                     (d) => setState(() => _endDate = d)),
+              
+              if (_dateRule == DateRule.specificDays) ...[
+                const SizedBox(height: 16),
+                _label('Select Days'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: List.generate(7, (index) {
+                    final dayNum = index + 1;
+                    final isSelected = _selectedDays.contains(dayNum);
+                    return FilterChip(
+                      label: Text(_dayNames[index]),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedDays.add(dayNum);
+                          } else {
+                            _selectedDays.remove(dayNum);
+                          }
+                        });
+                      },
+                      backgroundColor: Colors.grey.shade100,
+                      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                      side: BorderSide(
+                        color: isSelected 
+                          ? Theme.of(context).colorScheme.primary 
+                          : Colors.grey.shade300,
+                      ),
+                    );
+                  }),
+                ),
+              ],
               const SizedBox(height: 32),
 
               // ── Save button ──────────────────────────────────────────
@@ -178,8 +268,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     TextField(
       controller: c, maxLines: maxLines, keyboardType: keyboard,
       decoration: InputDecoration(
-        hintText: hint, border: const OutlineInputBorder(),
-        filled: true, fillColor: Colors.grey.shade50,
+        hintText: hint, 
+        border: const OutlineInputBorder(),
+        filled: true, 
+        fillColor: Colors.grey.shade50,
       ),
     );
 
@@ -221,6 +313,13 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         const SnackBar(content: Text('Please enter an activity name')));
       return;
     }
+    
+    if (_dateRule == DateRule.specificDays && _selectedDays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one day of the week')));
+      return;
+    }
+    
     setState(() => _saving = true);
     final task = Task()
       ..uuid        = _uuid.v4()
@@ -235,15 +334,20 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       ..startDate   = _startDate
       ..endDate     = _endDate
       ..currentStreak = 0
-      ..specificDays  = [];
+      ..specificDays  = _selectedDays.toList();
+    
     await TaskService.saveTask(task);
     setState(() => _saving = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('\u2705 Task saved!')));
+          const SnackBar(content: Text('✅ Task saved!')));
       _titleCtrl.clear(); _descCtrl.clear();
       _metricUnitCtrl.clear(); _metricTargetCtrl.text = '1';
-      setState(() { _selectedTag = null; _dateRule = DateRule.everyday; });
+      setState(() { 
+        _selectedTag = null; 
+        _dateRule = DateRule.everyday;
+        _selectedDays.clear();
+      });
     }
   }
 }

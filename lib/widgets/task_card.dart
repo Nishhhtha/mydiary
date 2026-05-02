@@ -17,10 +17,10 @@ class TaskCard extends StatelessWidget {
     final isCompleted = log?.isCompleted ?? false;
     final cardColor   = isCompleted
         ? Colors.grey.shade200
-        : (tag?.color.withOpacity(0.35) ?? const Color(0xFFB2EBF2));
+        : (tag?.color.withOpacity(0.2) ?? const Color(0xFFB2EBF2));
 
-    // GestureDetector wraps the whole card to catch long-press for delete
     return GestureDetector(
+      // NEW: Long-press to delete
       onLongPress: () => _confirmDelete(context),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -29,8 +29,8 @@ class TaskCard extends StatelessWidget {
           color: cardColor,
           borderRadius: BorderRadius.circular(16),
         ),
+        clipBehavior: Clip.hardEdge,
         child: Row(children: [
-          // ── Circle checkbox ─────────────────────────────────────────
           GestureDetector(
             onTap: () {
               if (task.metricType == MetricType.boolean) {
@@ -51,49 +51,58 @@ class TaskCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // ── Title + progress ────────────────────────────────────────
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Flexible(child: Text(task.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16,
-                      decoration: isCompleted ? TextDecoration.lineThrough : null,
-                    ))),
-                if (task.dateRule == DateRule.deadline && task.endDate != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(8),
+          // NEW: Wrap title in GestureDetector to show description
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _showDescriptionDialog(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Flexible(child: Text(
+                      task.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 16,
+                        decoration: isCompleted ? TextDecoration.lineThrough : null,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      maxLines: 1,
+                    )),
+                    if (task.dateRule == DateRule.deadline && task.endDate != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('Due ${_fmt(task.endDate!)}',
+                            style: const TextStyle(fontSize: 11, color: Colors.red)),
+                      ),
+                    ],
+                  ]),
+                  if (task.metricType == MetricType.numeric) ...[
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (progress / task.metricTarget).clamp(0.0, 1.0),
+                        minHeight: 6,
+                        backgroundColor: Colors.black12,
+                        valueColor: AlwaysStoppedAnimation(
+                          isCompleted ? Colors.green : Theme.of(context).colorScheme.primary),
+                      ),
                     ),
-                    child: Text('Due ${_fmt(task.endDate!)}',
-                        style: const TextStyle(fontSize: 11, color: Colors.red)),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${_num(progress)} / ${_num(task.metricTarget)} ${task.metricUnit ?? ''}',
+                      style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                  ],
                 ],
-              ]),
-              if (task.metricType == MetricType.numeric) ...[
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: (progress / task.metricTarget).clamp(0.0, 1.0),
-                    minHeight: 6,
-                    backgroundColor: Colors.black12,
-                    valueColor: AlwaysStoppedAnimation(
-                      isCompleted ? Colors.green : Theme.of(context).colorScheme.primary),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${_num(progress)} / ${_num(task.metricTarget)} ${task.metricUnit ?? ''}',
-                  style: const TextStyle(fontSize: 12, color: Colors.black54)),
-              ],
-            ],
-          )),
-          // ── Streak ──────────────────────────────────────────────────
+              ),
+            ),
+          ),
           if (task.currentStreak > 0)
             Container(
               margin: const EdgeInsets.only(left: 8),
@@ -102,10 +111,9 @@ class TaskCard extends StatelessWidget {
                 color: Colors.orange.shade100,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text('${task.currentStreak} \uD83D\uDD25',
+              child: Text('${task.currentStreak} 🔥',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             ),
-          // ── + button ────────────────────────────────────────────────
           if (task.metricType == MetricType.numeric)
             IconButton(
               icon: Icon(Icons.add_circle,
@@ -120,7 +128,92 @@ class TaskCard extends StatelessWidget {
     );
   }
 
-  // Shows a confirmation dialog before deleting
+  // NEW: Show description in a dialog with edit option
+  void _showDescriptionDialog(BuildContext context) {
+    final descCtrl = TextEditingController(text: task.description);
+    bool isEditing = false;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: Text(task.title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!isEditing)
+                  // Display mode
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      task.description.isEmpty
+                          ? 'No description added'
+                          : task.description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: task.description.isEmpty
+                            ? Colors.grey.shade600
+                            : Colors.black87,
+                      ),
+                    ),
+                  )
+                else
+                  // Edit mode
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Enter description',
+                      border: const OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            if (isEditing)
+              TextButton(
+                onPressed: () => setD(() => isEditing = false),
+                child: const Text('Cancel'),
+              ),
+            if (!isEditing)
+              ElevatedButton(
+                onPressed: () => setD(() {
+                  isEditing = true;
+                }),
+                child: const Text('Edit'),
+              ),
+            if (isEditing)
+              ElevatedButton(
+                onPressed: () async {
+                  // Save the updated description
+                  task.description = descCtrl.text.trim();
+                  await TaskService.saveTask(task);
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                ),
+                child: const Text('Save', style: TextStyle(color: Colors.white)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
