@@ -32,6 +32,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           firstDay: DateTime(2024), 
           lastDay: DateTime(2030),
           focusedDay: _focused,
+          rowHeight: 52.0,         // Adjusts height of the date rows
+          daysOfWeekHeight: 40.0,    // Adjusts height of Sun, Mon, Tue, etc.
           selectedDayPredicate: (d) => isSameDay(_selected, d),
           onDaySelected: (sel, foc) {
             // NEW: Call the callback when date is selected

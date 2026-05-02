@@ -73,9 +73,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(children: [
-                    for (final c in [Colors.green, Colors.blue, Colors.pink,
-                        Colors.orange, Colors.purple, Colors.teal,
-                        Colors.red, Colors.amber])
+                    for (final c in [Colors.yellowAccent, Colors.amber, Colors.orange, 
+                        Colors.red, Colors.pink.shade300, Colors.pink, Colors.pink.shade900, 
+                        Colors.lime, Colors.lightGreen, Colors.green, Colors.teal, Colors.cyan, 
+                        Colors.blue, Colors.indigo, Colors.purple, Colors.deepPurple])
                       GestureDetector(
                         onTap: () => setState(() => _newTagColor = c),
                         child: Padding(
