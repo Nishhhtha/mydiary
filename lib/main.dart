@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'isar_service.dart';
+import 'web_storage_service.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/todo_screen.dart';
 import 'screens/timetable_screen.dart';
@@ -8,7 +8,7 @@ import 'screens/add_task_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await IsarService.init();
+  await WebStorageService.init();
   runApp(const ProviderScope(child: MyApp()));
 }
 

@@ -3,8 +3,9 @@ import '../models/task.dart';
 import '../models/tag.dart';
 import '../models/task_log.dart';
 import '../providers/task_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class TaskCard extends StatelessWidget {
+class TaskCard extends ConsumerWidget {
   final Task task;
   final Tag? tag;
   final TaskLog? log;
@@ -12,7 +13,7 @@ class TaskCard extends StatelessWidget {
   const TaskCard({super.key, required this.task, this.tag, this.log});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final progress    = log?.currentProgress ?? 0.0;
     final isCompleted = log?.isCompleted ?? false;
     final cardColor   = isCompleted
@@ -21,7 +22,7 @@ class TaskCard extends StatelessWidget {
 
     return GestureDetector(
       // NEW: Long-press to delete
-      onLongPress: () => _confirmDelete(context),
+      onLongPress: () => _confirmDelete(context, ref),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -34,7 +35,7 @@ class TaskCard extends StatelessWidget {
           GestureDetector(
             onTap: () {
               if (task.metricType == MetricType.boolean) {
-                TaskService.toggleBoolean(task, isCompleted);
+                TaskService.toggleBoolean(task, isCompleted,ref);
               }
             },
             child: AnimatedContainer(
@@ -54,7 +55,7 @@ class TaskCard extends StatelessWidget {
           // NEW: Wrap title in GestureDetector to show description
           Expanded(
             child: GestureDetector(
-              onTap: () => _showDescriptionDialog(context),
+              onTap: () => _showDescriptionDialog(context, ref),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -121,7 +122,7 @@ class TaskCard extends StatelessWidget {
                   color: isCompleted
                       ? Colors.grey
                       : Theme.of(context).colorScheme.primary),
-              onPressed: isCompleted ? null : () => _showAddDialog(context),
+              onPressed: isCompleted ? null : () => _showAddDialog(context,ref),
             ),
         ]),
       ),
@@ -129,7 +130,7 @@ class TaskCard extends StatelessWidget {
   }
 
   // NEW: Show description in a dialog with edit option
-  void _showDescriptionDialog(BuildContext context) {
+  void _showDescriptionDialog(BuildContext context, WidgetRef ref) {
     final descCtrl = TextEditingController(text: task.description);
     bool isEditing = false;
 
@@ -195,8 +196,26 @@ class TaskCard extends StatelessWidget {
               ElevatedButton(
                 onPressed: () async {
                   // Save the updated description
-                  task.description = descCtrl.text.trim();
-                  await TaskService.saveTask(task);
+                  final updated = task.copyWith();  // then handle description separately
+                  // Actually, add description to copyWith in task.dart first (see below)
+                  await TaskService.saveTask(
+                    Task(
+                      uuid:          task.uuid,
+                      title:         task.title,
+                      description:   descCtrl.text.trim(),  // updated value
+                      tagUuid:       task.tagUuid,
+                      metricType:    task.metricType,
+                      metricUnit:    task.metricUnit,
+                      metricTarget:  task.metricTarget,
+                      dateRule:      task.dateRule,
+                      startDate:     task.startDate,
+                      endDate:       task.endDate,
+                      currentStreak: task.currentStreak,
+                      lastCompletedDate: task.lastCompletedDate,
+                      specificDays:  task.specificDays,
+                    ),
+                    ref,
+                  );
                   Navigator.pop(ctx);
                 },
                 style: ElevatedButton.styleFrom(
@@ -214,7 +233,7 @@ class TaskCard extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context) {
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -231,7 +250,7 @@ class TaskCard extends StatelessWidget {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               Navigator.pop(context);
-              TaskService.deleteTask(task);
+              TaskService.deleteTask(task, ref);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
@@ -240,7 +259,7 @@ class TaskCard extends StatelessWidget {
     );
   }
 
-  void _showAddDialog(BuildContext context) {
+  void _showAddDialog(BuildContext context, WidgetRef ref) {
     final ctrl = TextEditingController();
     showDialog(
       context: context,
@@ -260,7 +279,7 @@ class TaskCard extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               final val = double.tryParse(ctrl.text);
-              if (val != null && val > 0) TaskService.addProgress(task, val);
+              if (val != null && val > 0) TaskService.addProgress(task, val, ref);
               Navigator.pop(context);
             },
             child: const Text('Add'),

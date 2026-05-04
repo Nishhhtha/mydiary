@@ -1,20 +1,26 @@
-import 'package:isar/isar.dart';
 import 'package:flutter/material.dart';
 
-part 'tag.g.dart';
-
-@collection
 class Tag {
-  Id id = Isar.autoIncrement;
+  final String uuid;
+  final String name;
+  final String colorHex;
+  final int order;
 
-  late String uuid;
-  late String name;       // e.g. 'Exercise'
-  late String colorHex;   // e.g. 'FF4CAF50' — ARGB hex colour
-  late int order;         // Display order in filter bar
+  Tag({required this.uuid, required this.name,
+       required this.colorHex, this.order = 0});
 
-  Tag();
-
-  // Convenience getter: converts hex string to Flutter Color
-  @ignore // @ignore means Isar will not try to store this computed value
+  // Identical getter to your current code — no @ignore needed
   Color get color => Color(int.parse(colorHex, radix: 16));
+
+  Map<String, dynamic> toMap() => {
+    'uuid': uuid, 'name': name,
+    'colorHex': colorHex, 'order': order,
+  };
+
+  factory Tag.fromMap(Map<dynamic, dynamic> m) => Tag(
+    uuid:     m['uuid'] as String,
+    name:     m['name'] as String,
+    colorHex: m['colorHex'] as String,
+    order:    (m['order'] as num?)?.toInt() ?? 0,
+  );
 }

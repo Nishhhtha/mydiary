@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
-import '../isar_service.dart';
 import '../models/time_block.dart';
+import '../web_storage_service.dart';
 
 const _uuid = Uuid();
 const double _hourHeight = 64.0;
@@ -59,11 +58,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
   }
 
   Future<void> _loadBlocks() async {
-    final blocks = await IsarService.db.timeBlocks
-        .filter()
-        .dateEqualTo(_ds(_viewDate))
-        .findAll();
-    blocks.sort((a, b) => a.startMinute.compareTo(b.startMinute));
+    final blocks = await WebStorageService.getBlocksForDate(_ds(_viewDate));
+    // blocks.sort((a, b) => a.startMinute.compareTo(b.startMinute));
     if (mounted) setState(() => _blocks = blocks);
   }
 
@@ -224,9 +220,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               Navigator.pop(context);
-              await IsarService.db.writeTxn(() async {
-                await IsarService.db.timeBlocks.delete(block.id);
-              });
+              await WebStorageService.deleteTimeBlock(block.uuid);
               _loadBlocks();
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -328,17 +322,17 @@ class _TimetableScreenState extends State<TimetableScreen> {
                     const SnackBar(content: Text('End time must be after start time')));
                   return;
                 }
-                final block = TimeBlock()
-                  ..uuid        = _uuid.v4()
-                  ..label       = labelCtrl.text.trim()
-                  ..date        = _ds(_viewDate)
-                  ..startMinute = startMin
-                  ..endMinute   = endMin
-                  ..colorHex    = selectedColor.value
-                      .toRadixString(16).padLeft(8,'0').toUpperCase();
-                await IsarService.db.writeTxn(() async {
-                  await IsarService.db.timeBlocks.put(block);
-                });
+                final block = TimeBlock(
+                uuid:        _uuid.v4(),
+                label:       labelCtrl.text.trim(),
+                date:        _ds(_viewDate),
+                startMinute: startMin,
+                endMinute:   endMin,
+                colorHex:    selectedColor.value
+                    .toRadixString(16).padLeft(8,'0').toUpperCase(),
+              );
+                await WebStorageService.saveTimeBlock(block);
+
                 Navigator.pop(ctx);
                 _loadBlocks();
               },

@@ -295,12 +295,13 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
   Future<void> _saveTag() async {
     if (_newTagNameCtrl.text.trim().isEmpty) return;
-    final tag = Tag()
-      ..uuid = _uuid.v4()
-      ..name = _newTagNameCtrl.text.trim()
-      ..colorHex = _newTagColor.value.toRadixString(16).padLeft(8, '0').toUpperCase()
-      ..order = 0;
-    await TaskService.saveTag(tag);
+    final tag = Tag(
+      uuid : _uuid.v4(),
+      name : _newTagNameCtrl.text.trim(),
+      colorHex : _newTagColor.value.toRadixString(16).padLeft(8, '0').toUpperCase(),
+      order : 0,
+    );
+    await TaskService.saveTag(tag,ref);
     setState(() {
       _selectedTag = tag;
       _creatingTag = false;
@@ -309,46 +310,44 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   }
 
   Future<void> _save() async {
-    if (_titleCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an activity name')));
-      return;
-    }
-    
-    if (_dateRule == DateRule.specificDays && _selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one day of the week')));
-      return;
-    }
-    
-    setState(() => _saving = true);
-    final task = Task()
-      ..uuid        = _uuid.v4()
-      ..title       = _titleCtrl.text.trim()
-      ..description = _descCtrl.text.trim()
-      ..tagUuid     = _selectedTag?.uuid ?? 'general'
-      ..metricType  = _metricType
-      ..metricUnit  = _metricType == MetricType.numeric ? _metricUnitCtrl.text.trim() : null
-      ..metricTarget= _metricType == MetricType.numeric
-                        ? (double.tryParse(_metricTargetCtrl.text) ?? 1.0) : 1.0
-      ..dateRule    = _dateRule
-      ..startDate   = _startDate
-      ..endDate     = _endDate
-      ..currentStreak = 0
-      ..specificDays  = _selectedDays.toList();
-    
-    await TaskService.saveTask(task);
-    setState(() => _saving = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Task saved!')));
-      _titleCtrl.clear(); _descCtrl.clear();
-      _metricUnitCtrl.clear(); _metricTargetCtrl.text = '1';
-      setState(() { 
-        _selectedTag = null; 
-        _dateRule = DateRule.everyday;
-        _selectedDays.clear();
-      });
-    }
+  if (_titleCtrl.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please enter an activity name')));
+    return;
   }
+  if (_dateRule == DateRule.specificDays && _selectedDays.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select at least one day of the week')));
+    return;
+  }
+  setState(() => _saving = true);
+  final task = Task(                        // ← named constructor, not cascade
+    uuid:          _uuid.v4(),
+    title:         _titleCtrl.text.trim(),
+    description:   _descCtrl.text.trim(),
+    tagUuid:       _selectedTag?.uuid ?? 'general',
+    metricType:    _metricType,
+    metricUnit:    _metricType == MetricType.numeric ? _metricUnitCtrl.text.trim() : null,
+    metricTarget:  _metricType == MetricType.numeric
+                     ? (double.tryParse(_metricTargetCtrl.text) ?? 1.0) : 1.0,
+    dateRule:      _dateRule,
+    startDate:     _startDate,
+    endDate:       _endDate,
+    currentStreak: 0,
+    specificDays:  _selectedDays.toList(),
+  );
+  await TaskService.saveTask(task, ref);    // ← add ref
+  setState(() => _saving = false);
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Task saved!')));
+    _titleCtrl.clear(); _descCtrl.clear();
+    _metricUnitCtrl.clear(); _metricTargetCtrl.text = '1';
+    setState(() {
+      _selectedTag = null;
+      _dateRule = DateRule.everyday;
+      _selectedDays.clear();
+    });
+  }
+}
 }
