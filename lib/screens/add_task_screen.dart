@@ -212,6 +212,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                   DropdownMenuItem(value: DateRule.everyday,     child: Text('Every day')),
                   DropdownMenuItem(value: DateRule.specificDate, child: Text('Date')),
                   DropdownMenuItem(value: DateRule.deadline,     child: Text('Deadline')),
+                  DropdownMenuItem(value: DateRule.specificDatePeriod, child: Text('Time Period')),
                   DropdownMenuItem(value: DateRule.specificDays, child: Text('Repeat')),
                 ],
                 onChanged: (v) => setState(() {
@@ -221,11 +222,14 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                   }
                 }),
               ),
-              if (_dateRule == DateRule.specificDate || _dateRule == DateRule.deadline)
+              if (_dateRule == DateRule.specificDate || _dateRule == DateRule.deadline || _dateRule == DateRule.specificDatePeriod)
                 _datePicker('Start Date', _startDate,
                     (d) => setState(() => _startDate = d)),
               if (_dateRule == DateRule.deadline)
                 _datePicker('Due Date (Deadline)', _endDate,
+                    (d) => setState(() => _endDate = d)),
+              if (_dateRule == DateRule.specificDatePeriod)
+                _datePicker('End Date', _endDate,
                     (d) => setState(() => _endDate = d)),
               
               if (_dateRule == DateRule.specificDays) ...[

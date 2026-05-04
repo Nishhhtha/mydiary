@@ -24,6 +24,10 @@ bool taskAppearsOn(Task task, DateTime date) {
       if (task.endDate == null) return false;
       final end = dateOnly(task.endDate!);
       return !today.isBefore(start) && !today.isAfter(end);
+    case DateRule.specificDatePeriod:
+      if (task.endDate == null) return false;
+      final end = dateOnly(task.endDate!);
+      return !today.isBefore(start) && !today.isAfter(end);
     case DateRule.specificDays:
       return task.specificDays.contains(date.weekday);
   }
@@ -76,14 +80,32 @@ final allTagsProvider =
 class LogsForDateNotifier
     extends FamilyAsyncNotifier<Map<String, TaskLog>, DateTime> {
   @override
-  Future<Map<String, TaskLog>> build(DateTime arg) {
-    return WebStorageService.getLogsForDate(dateStr(arg));
+  Future<Map<String, TaskLog>> build(DateTime arg) async {
+    final map = await WebStorageService.getLogsForDate(dateStr(arg));
+    final tasks = await ref.watch(allTasksProvider.future);
+    final today = dateOnly(arg);
+    for (final task in tasks) {
+      if (task.dateRule == DateRule.deadline && task.lastCompletedDate != null) {
+        final completedDay = dateOnly(task.lastCompletedDate!);
+        if (!today.isBefore(completedDay)) {
+          if (!map.containsKey(task.uuid) || !map[task.uuid]!.isCompleted) {
+            map[task.uuid] = TaskLog(
+              uuid: 'virtual-${task.uuid}-${dateStr(today)}',
+              taskUuid: task.uuid,
+              date: dateStr(arg),
+              currentProgress: task.metricTarget,
+              isCompleted: true,
+            );
+          }
+        }
+      }
+    }
+    return map;
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-        () => WebStorageService.getLogsForDate(dateStr(arg)));
+    state = await AsyncValue.guard(() => build(arg));
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/time_block.dart';
+import '../models/task.dart';
 import '../web_storage_service.dart';
 
 const _uuid = Uuid();
@@ -236,6 +237,11 @@ class _TimetableScreenState extends State<TimetableScreen> {
     TimeOfDay start = const TimeOfDay(hour: 9, minute: 0);
     TimeOfDay end   = const TimeOfDay(hour: 10, minute: 0);
     Color selectedColor = const Color(0xFF0D9488);
+    DateRule dateRule = DateRule.specificDate;
+    DateTime startDate = _viewDate;
+    DateTime? endDate;
+    final Set<int> selectedDays = {};
+    const List<String> dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     final colors = [
       const Color(0xFF0D9488),
@@ -305,6 +311,70 @@ class _TimetableScreenState extends State<TimetableScreen> {
                     ),
                   ),
                 )).toList()),
+                const SizedBox(height: 16),
+                const Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<DateRule>(
+                  value: dateRule,
+                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value: DateRule.everyday,     child: Text('Every day')),
+                    DropdownMenuItem(value: DateRule.specificDate, child: Text('Date')),
+                    DropdownMenuItem(value: DateRule.specificDatePeriod, child: Text('Time Period')),
+                    DropdownMenuItem(value: DateRule.specificDays, child: Text('Repeat')),
+                  ],
+                  onChanged: (v) => setD(() {
+                    dateRule = v!;
+                    if (v == DateRule.specificDays) selectedDays.clear();
+                  }),
+                ),
+                if (dateRule == DateRule.specificDate || dateRule == DateRule.specificDatePeriod)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Start Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${startDate.day}/${startDate.month}/${startDate.year}'),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx, initialDate: startDate,
+                        firstDate: DateTime(2024), lastDate: DateTime(2030),
+                      );
+                      if (picked != null) setD(() => startDate = picked);
+                    },
+                  ),
+                if (dateRule == DateRule.specificDatePeriod)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('End Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(endDate != null ? '${endDate!.day}/${endDate!.month}/${endDate!.year}' : 'Select an end date'),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx, initialDate: endDate ?? startDate,
+                        firstDate: DateTime(2024), lastDate: DateTime(2030),
+                      );
+                      if (picked != null) setD(() => endDate = picked);
+                    },
+                  ),
+                if (dateRule == DateRule.specificDays) ...[
+                  const SizedBox(height: 8),
+                  const Text('Select Days', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Wrap(
+                    spacing: 8, runSpacing: 8,
+                    children: List.generate(7, (index) {
+                      final dayNum = index + 1;
+                      final isSelected = selectedDays.contains(dayNum);
+                      return FilterChip(
+                        label: Text(dayNames[index]),
+                        selected: isSelected,
+                        onSelected: (s) => setD(() {
+                          if (s) selectedDays.add(dayNum);
+                          else selectedDays.remove(dayNum);
+                        }),
+                      );
+                    }),
+                  ),
+                ],
               ],
             ),
           ),
@@ -324,14 +394,17 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   return;
                 }
                 final block = TimeBlock(
-                uuid:        _uuid.v4(),
-                label:       labelCtrl.text.trim(),
-                date:        _ds(_viewDate),
-                startMinute: startMin,
-                endMinute:   endMin,
-                colorHex:    selectedColor.value
-                    .toRadixString(16).padLeft(8,'0').toUpperCase(),
-              );
+                  uuid:        _uuid.v4(),
+                  label:       labelCtrl.text.trim(),
+                  startMinute: startMin,
+                  endMinute:   endMin,
+                  colorHex:    selectedColor.value
+                      .toRadixString(16).padLeft(8,'0').toUpperCase(),
+                  dateRule:    dateRule,
+                  startDate:   startDate,
+                  endDate:     endDate,
+                  specificDays:selectedDays.toList(),
+                );
                 await WebStorageService.saveTimeBlock(block);
 
                 Navigator.pop(ctx);

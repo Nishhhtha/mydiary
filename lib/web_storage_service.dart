@@ -120,13 +120,33 @@ class WebStorageService {
     await txn.completed;
   }
 
-  static Future<List<TimeBlock>> getBlocksForDate(String date) async {
+  static bool _blockAppearsOn(TimeBlock block, DateTime date) {
+    final today = DateTime(date.year, date.month, date.day);
+    final start = DateTime(block.startDate.year, block.startDate.month, block.startDate.day);
+    switch (block.dateRule) {
+      case DateRule.everyday: return true;
+      case DateRule.specificDate: return start == today;
+      case DateRule.deadline:
+        if (block.endDate == null) return false;
+        final end = DateTime(block.endDate!.year, block.endDate!.month, block.endDate!.day);
+        return !today.isBefore(start) && !today.isAfter(end);
+      case DateRule.specificDays:
+        return block.specificDays.contains(date.weekday);
+      case DateRule.specificDatePeriod:
+        if (block.endDate == null) return false;
+        final end = DateTime(block.endDate!.year, block.endDate!.month, block.endDate!.day);
+        return !today.isBefore(start) && !today.isAfter(end);
+    }
+  }
+
+  static Future<List<TimeBlock>> getBlocksForDate(String dateStr) async {
+    final date = DateTime.parse(dateStr);
     final txn  = db.transaction(_blocks, idbModeReadOnly);
     final recs = await txn.objectStore(_blocks).getAll();
     await txn.completed;
     final blocks = recs
         .map((r) => TimeBlock.fromMap(r as Map))
-        .where((b) => b.date == date)
+        .where((b) => _blockAppearsOn(b, date))
         .toList();
     blocks.sort((a, b) => a.startMinute.compareTo(b.startMinute));
     return blocks;

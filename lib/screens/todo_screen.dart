@@ -74,16 +74,26 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
                 : logsAsync.when(
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (e,_) => Center(child: Text('Error: $e')),
-                    data: (logs) => ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: filtered.length,
-                      itemBuilder: (ctx, i) {
-                        final task = filtered[i];
-                        final tag  = tagMap[task.tagUuid];
-                        final log  = logs[task.uuid];
-                        return TaskCard(task: task, tag: tag, log: log);
-                      },
-                    ),
+                    data: (logs) {
+                      final sortedTasks = List<Task>.from(filtered)
+                        ..sort((a, b) {
+                          final aDone = logs[a.uuid]?.isCompleted ?? false;
+                          final bDone = logs[b.uuid]?.isCompleted ?? false;
+                          if (aDone && !bDone) return 1;
+                          if (!aDone && bDone) return -1;
+                          return 0;
+                        });
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: sortedTasks.length,
+                        itemBuilder: (ctx, i) {
+                          final task = sortedTasks[i];
+                          final tag  = tagMap[task.tagUuid];
+                          final log  = logs[task.uuid];
+                          return TaskCard(task: task, tag: tag, log: log);
+                        },
+                      );
+                    },
                   ),
             ),
           ]);

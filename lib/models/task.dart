@@ -1,4 +1,4 @@
-enum DateRule { specificDate, everyday, deadline, specificDays }
+enum DateRule { specificDate, everyday, deadline, specificDays, specificDatePeriod }
 enum MetricType { boolean, numeric }
 
 class Task {
