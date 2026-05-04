@@ -77,6 +77,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        foregroundColor: const Color(0xFFFAFAFA),
         title: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           IconButton(
             icon: const Icon(Icons.chevron_left),
@@ -97,7 +98,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
             },
             child: Text(
               isToday ? 'Today — ${_fmtDate(_viewDate)}' : _fmtDate(_viewDate),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFFFAFAFA)),
             ),
           ),
           IconButton(
@@ -163,8 +164,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
       child: Row(children: [
         Container(width: 10, height: 10,
             decoration: const BoxDecoration(
-              color: Colors.red, shape: BoxShape.circle)),
-        Expanded(child: Container(height: 2, color: Colors.red)),
+              color: const Color(0xFFFFA4A4), shape: BoxShape.circle)),
+        Expanded(child: Container(height: 2, color: const Color(0xFFFFA4A4))),
       ]),
     );
   }

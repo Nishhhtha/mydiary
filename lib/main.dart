@@ -20,9 +20,91 @@ class MyApp extends StatelessWidget {
       title: 'Planner',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0D9488)),
         useMaterial3: true,
         fontFamily: 'Roboto',
+        // Seed the colour scheme from your soft teal
+        colorScheme: ColorScheme.light(
+          primary:          const Color(0xFFBADFDB), // soft teal
+          onPrimary:        const Color(0xFF3D3D3D), // dark text on teal
+          primaryContainer: const Color(0xFFBADFDB).withOpacity(0.4),
+          secondary:        const Color(0xFFFFA4A4), // coral
+          onSecondary:      const Color(0xFF3D3D3D),
+          secondaryContainer: const Color(0xFFFFBDBD),
+          surface:          const Color(0xFFFCF9EA), // cream — all card/surface backgrounds
+          onSurface:        const Color(0xFF3D3D3D),
+          background:       const Color(0xFFFCF9EA), // cream — page backgrounds
+          onBackground:     const Color(0xFF3D3D3D),
+          error:            const Color(0xFFFFA4A4), // coral instead of red
+          outline:          const Color(0xFFBADFDB).withOpacity(0.5),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFFCF9EA),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFBADFDB),
+          foregroundColor: Color(0xFF3D3D3D),
+          elevation: 0,
+          centerTitle: false,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: const Color(0xFFFCF9EA),
+          indicatorColor: const Color(0xFFBADFDB).withOpacity(0.5),
+          iconTheme: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const IconThemeData(color: Color(0xFF3D3D3D));
+            }
+            return IconThemeData(color: const Color(0xFF3D3D3D).withOpacity(0.45));
+          }),
+          labelTextStyle: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
+                  color: Color(0xFF3D3D3D));
+            }
+            return TextStyle(fontSize: 12,
+                color: const Color(0xFF3D3D3D).withOpacity(0.45));
+          }),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFBADFDB),
+            foregroundColor: const Color(0xFF3D3D3D),
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.7),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: const Color(0xFFBADFDB).withOpacity(0.5)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: const Color(0xFFBADFDB).withOpacity(0.5)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFBADFDB), width: 2),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          backgroundColor: const Color(0xFFBADFDB).withOpacity(0.15),
+          selectedColor: const Color(0xFFBADFDB).withOpacity(0.4),
+          labelStyle: const TextStyle(color: Color(0xFF3D3D3D)),
+          side: BorderSide(color: const Color(0xFFBADFDB).withOpacity(0.4)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFFFFA4A4),
+          foregroundColor: Color(0xFF3D3D3D),
+        ),
+        cardTheme: CardTheme(
+          color: const Color(0xFFFCF9EA),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: const Color(0xFFBADFDB).withOpacity(0.3)),
+          ),
+        ),
       ),
       home: const MainNavigation(),
     );

@@ -22,7 +22,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final tasksAsync = ref.watch(allTasksProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendar'),
+        title: const Text(
+          'Calendar',
+          style: TextStyle(
+          color: Color(0xFFFAFAFA), // This is your #fafafa hex code
+          ),),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary
       ),
       body: tasksAsync.when(
@@ -55,7 +59,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               shape: BoxShape.circle,
             ),
             selectedDecoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              color: Color(0xFFFFA4A4), 
               shape: BoxShape.circle,
             ),
           ),

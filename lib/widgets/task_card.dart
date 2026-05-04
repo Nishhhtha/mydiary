@@ -17,7 +17,7 @@ class TaskCard extends ConsumerWidget {
     final progress    = log?.currentProgress ?? 0.0;
     final isCompleted = log?.isCompleted ?? false;
     final cardColor   = isCompleted
-        ? Colors.grey.shade200
+        ? const Color(0xFFF0EEEA)
         : (tag?.color.withOpacity(0.2) ?? const Color(0xFFB2EBF2));
 
     return GestureDetector(
@@ -109,7 +109,7 @@ class TaskCard extends ConsumerWidget {
               margin: const EdgeInsets.only(left: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.orange.shade100,
+                color: const Color(0xFFFFBDBD),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text('${task.currentStreak} 🔥',

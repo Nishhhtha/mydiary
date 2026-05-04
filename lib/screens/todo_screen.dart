@@ -50,6 +50,7 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
         title: Text('${_fmtDate(_displayDate)}',
             style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        foregroundColor: const Color(0xFFFAFAFA),
       ),
       body: tagsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -113,7 +114,7 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
         decoration: BoxDecoration(
           // Always show tag colour — full opacity when selected, faint when not
           color: uuid == null
-              ? (selected ? Colors.grey.shade400 : Colors.grey.shade200)
+              ? (selected ? const Color(0xFFBADFDB) : const Color(0xFFFCF9EA))
               : (selected ? bgColor.withOpacity(0.5) : bgColor.withOpacity(0.15)),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(

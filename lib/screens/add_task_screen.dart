@@ -38,7 +38,12 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     final tagsAsync = ref.watch(allTagsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Task'),
+      appBar: AppBar(title: const Text(
+        'Add Task',
+        style: TextStyle(
+        color: Color(0xFFFAFAFA), // Applying the hex color here
+        ),
+        ),
           backgroundColor: Theme.of(context).colorScheme.inversePrimary),
       body: tagsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -263,8 +268,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                 child: ElevatedButton(
                   onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D9488),
-                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFFBADFDB),  // ← your soft teal
+                    foregroundColor: const Color(0xFF3D3D3D),  // dark text (not white)
                   ),
                   child: _saving
                       ? const CircularProgressIndicator(color: Colors.white)
