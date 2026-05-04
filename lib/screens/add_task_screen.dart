@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/task.dart';
 import '../models/tag.dart';
 import '../providers/task_provider.dart';
+import '../web_storage_service.dart';
 
 const _uuid = Uuid();
 
@@ -54,12 +55,30 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   ...tags.map((t) => GestureDetector(
                     onTap: () => setState(() => _selectedTag = t),
+                    onLongPress: () => _confirmDeleteTag(context, t),  // ← Fix 2 added here
                     child: Chip(
-                      label: Text(t.name),
+                      label: Text(
+                        t.name,
+                        style: TextStyle(
+                          // Show tag colour as text colour
+                          color: _selectedTag?.uuid == t.uuid
+                              ? t.color
+                              : t.color.withOpacity(0.75),
+                          fontWeight: _selectedTag?.uuid == t.uuid
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      // Always show tag colour as background
                       backgroundColor: _selectedTag?.uuid == t.uuid
-                          ? t.color.withOpacity(0.5) : null,
+                          ? t.color.withOpacity(0.3)
+                          : t.color.withOpacity(0.12),
                       side: BorderSide(
-                        color: _selectedTag?.uuid == t.uuid ? Colors.black38 : Colors.grey.shade300),
+                        color: _selectedTag?.uuid == t.uuid
+                            ? t.color.withOpacity(0.8)
+                            : t.color.withOpacity(0.3),
+                        width: 1.5,
+                      ),
                     ),
                   )),
                   ActionChip(
@@ -308,6 +327,36 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _newTagNameCtrl.clear();
     });
   }
+
+  void _confirmDeleteTag(BuildContext context, Tag tag) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Delete Tag?'),
+      content: Text(
+        'Delete the tag "${tag.name}"?\n\nTasks using this tag will not be deleted — they will just lose their tag colour.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () async {
+            Navigator.pop(context);
+            await WebStorageService.deleteTag(tag.uuid);
+            await ref.read(allTagsProvider.notifier).refresh();
+            if (_selectedTag?.uuid == tag.uuid) {
+              setState(() => _selectedTag = null);
+            }
+          },
+          child: const Text('Delete', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
 
   Future<void> _save() async {
   if (_titleCtrl.text.trim().isEmpty) {

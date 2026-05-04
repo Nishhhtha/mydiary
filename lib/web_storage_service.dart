@@ -77,6 +77,12 @@ class WebStorageService {
         ..sort((a, b) => a.order.compareTo(b.order));
   }
 
+  static Future<void> deleteTag(String uuid) async {
+  final txn = db.transaction(_tags, idbModeReadWrite);
+  await txn.objectStore(_tags).delete(uuid);
+  await txn.completed;
+}
+
   // ── Logs ──────────────────────────────────────────────────────────
   static Future<TaskLog?> getLog(String taskUuid, String date) async {
     final all = await getAllLogs();

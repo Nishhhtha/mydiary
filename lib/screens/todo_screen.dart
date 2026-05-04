@@ -97,12 +97,13 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(children: [
         _chip(null, 'All', Colors.grey.shade200),
-        ...tags.map((t) => _chip(t.uuid, t.name, t.color.withOpacity(0.2))),
+        ...tags.map((t) => _chip(t.uuid, t.name, t.color)),
       ]),
     );
   }
 
-  Widget _chip(String? uuid, String label, Color bgColor) {
+  Widget _chip(String? uuid, String label, Color bgColor) 
+  {
     final selected = _selectedTagUuid == uuid;
     return GestureDetector(
       onTap: () => setState(() => _selectedTagUuid = uuid),
@@ -110,14 +111,27 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? bgColor : Colors.grey.shade100,
+          // Always show tag colour — full opacity when selected, faint when not
+          color: uuid == null
+              ? (selected ? Colors.grey.shade400 : Colors.grey.shade200)
+              : (selected ? bgColor.withOpacity(0.5) : bgColor.withOpacity(0.15)),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? Colors.black38 : Colors.transparent, width: 1.5),
+            color: selected ? bgColor.withOpacity(1) : Colors.transparent,
+            width: 1.5,
+          ),
         ),
         clipBehavior: Clip.hardEdge,
-        child: Text(label,
-            style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            // For tag chips (not 'All'), show the tag colour as text colour
+            color: uuid == null
+                ? Colors.black87
+                : bgColor.withOpacity(selected ? 1 : 0.7),
+          ),
+        ),
       ),
     );
   }
